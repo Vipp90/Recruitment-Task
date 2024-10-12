@@ -27,10 +27,10 @@ namespace Rekrutacja.Workers.Template
         {
 
             [Caption("A")]
-            public double A { get; set; }
+            public string A { get; set; }
 
             [Caption("B")]
-            public double B { get; set; }
+            public string B { get; set; }
 
             [Caption("Data obliczeń")]
             public Date DataObliczen { get; set; }
@@ -73,8 +73,6 @@ namespace Rekrutacja.Workers.Template
             {
                 throw new ArgumentNullException("Kontekst nie zawiera żadnego pracownika");
             }
-            //Walidacja zmiennych
-            WalidacjaZmiennych(this.Parametry.A, this.Parametry.B);
 
             //Modyfikacja danych
             //Aby modyfikować dane musimy mieć otwartą sesję, któa nie jest read only
@@ -87,11 +85,18 @@ namespace Rekrutacja.Workers.Template
                     {
                         //Pobieramy obiekt z Nowo utworzonej sesji
                         var pracownikZSesja = nowaSesja.Get(pracownik);
+
                         if (Parametry == null)
                         {
                             throw new ArgumentNullException("Parametry nie zostały przekazane");
                         }
-                        var wynik = ObliczPoleFigury(this.Parametry.A, this.Parametry.B, this.Parametry.Figura);
+                        int A = ParserStringToInt(this.Parametry.A);
+                        int B = 0; // Domyślnie 0, gdy figura nie wymaga drugiego wymiaru
+                        if (this.Parametry.Figura is Figury.Trójkąt || this.Parametry.Figura is Figury.Prostokąt)
+                        {
+                            B = ParserStringToInt(this.Parametry.B);
+                        }
+                        var wynik = ObliczPoleFigury(A, B, this.Parametry.Figura);
                         //Features - są to pola rozszerzające obiekty w bazie danych, dzięki czemu nie jestesmy ogarniczeni to kolumn jakie zostały utworzone przez producenta
                         pracownikZSesja.Features["DataObliczen"] = this.Parametry.DataObliczen;
                         //Pole Wynik przyjmuje wartość double, dlatego konieczna jest ponowna konwersja na typ double
@@ -130,19 +135,31 @@ namespace Rekrutacja.Workers.Template
             return Convert.ToInt32(wynik);
         }
 
-        public void WalidacjaZmiennych(double a, double b)
+        public int ParserStringToInt(string zmienna)
         {
-
-            if (!CzyJestDodatnia(a)) throw new ArgumentException("Zmienna A musi być dodatnia");
-            if (this.Parametry.Figura is Figury.Prostokąt || this.Parametry.Figura is Figury.Trójkąt)
+            int wynik = 0;
+            //Sprawdzamy czy string nie jest pusty
+            if (String.IsNullOrEmpty(zmienna))
             {
-                if (CzyJestDodatnia(b)) throw new ArgumentException("Zmienna B musi być dodatnia");
+                throw new ArgumentException("Zmienna nie może być pusta");
             }
-        }
 
-        public bool CzyJestDodatnia(double zmienna)
-        {
-            return (zmienna >= 0);
+            if (zmienna[0] == '-')
+            {
+                throw new FormatException("Zmienna do obliczania pola powierzchni figur nie może być ujemna");
+            }
+
+            for (int i = 0; i < zmienna.Length; i++)
+            {
+                var aktualnyZnak = zmienna[i];
+                if (aktualnyZnak < '0' || aktualnyZnak > '9')
+                {
+                    throw new FormatException($"Nieprawidłowy znak '{aktualnyZnak}' w zmiennej tekstowej");
+                }
+                int wartośćInt = aktualnyZnak - '0';
+                wynik = wynik * 10 + wartośćInt;
+            }
+            return wynik;
         }
     }
 }
