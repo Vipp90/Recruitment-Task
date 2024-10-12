@@ -15,9 +15,17 @@ namespace Rekrutacja.Workers.Template
 {
     public class TemplateWorker
     {
+        public enum Figury
+        {
+            Kwadrat,
+            Prostokąt,
+            Trójkąt,
+            Koło
+        }
         //Aby parametry działały prawidłowo dziedziczymy po klasie ContextBase
         public class TemplateWorkerParametry : ContextBase
         {
+
             [Caption("A")]
             public double A { get; set; }
 
@@ -28,7 +36,7 @@ namespace Rekrutacja.Workers.Template
             public Date DataObliczen { get; set; }
 
             [Caption("Operacja")]
-            public char Operacja { get; set; }
+            public Figury Figura { get; set; }
 
             public TemplateWorkerParametry(Context context) : base(context)
             {
@@ -65,6 +73,8 @@ namespace Rekrutacja.Workers.Template
             {
                 throw new ArgumentNullException("Kontekst nie zawiera żadnego pracownika");
             }
+            //Walidacja zmiennych
+            WalidacjaZmiennych(this.Parametry.A, this.Parametry.B);
 
             //Modyfikacja danych
             //Aby modyfikować dane musimy mieć otwartą sesję, któa nie jest read only
@@ -81,10 +91,12 @@ namespace Rekrutacja.Workers.Template
                         {
                             throw new ArgumentNullException("Parametry nie zostały przekazane");
                         }
-                        var wynik = WykonajObliczenie(this.Parametry.A, this.Parametry.B, this.Parametry.Operacja);
+                        var wynik = ObliczPoleFigury(this.Parametry.A, this.Parametry.B, this.Parametry.Figura);
                         //Features - są to pola rozszerzające obiekty w bazie danych, dzięki czemu nie jestesmy ogarniczeni to kolumn jakie zostały utworzone przez producenta
                         pracownikZSesja.Features["DataObliczen"] = this.Parametry.DataObliczen;
-                        pracownikZSesja.Features["Wynik"] = wynik;
+                        //Pole Wynik przyjmuje wartość double, dlatego konieczna jest ponowna konwersja na typ double
+                        double wynikDouble = wynik;
+                        pracownikZSesja.Features["Wynik"] = wynikDouble;
                     }
                     //Zatwierdzamy zmiany wykonane w sesji
                     trans.CommitUI();
@@ -94,28 +106,43 @@ namespace Rekrutacja.Workers.Template
             }
         }
 
-        public double WykonajObliczenie(double a, double b, char operacja)
+        public int ObliczPoleFigury(double a, double b, Figury figura)
         {
             double wynik = 0;
-            switch (operacja)
+            switch (figura)
             {
-                case '+':
-                    wynik = a + b;
+                case Figury.Kwadrat:
+                    wynik = a * a;
                     break;
-                case '-':
-                    wynik = a - b;
+                case Figury.Trójkąt:
+                    wynik = (a * b) / 2;
                     break;
-                case '*':
+                case Figury.Prostokąt:
                     wynik = a * b;
                     break;
-                case '/':
-                    if (b == 0) throw new DivideByZeroException("Nie można dzielić przez zero");
-                    wynik = a / b;
+                case Figury.Koło:
+                    wynik = Math.PI * a * a;
                     break;
                 default:
-                    throw new InvalidOperationException("Nieznana operacja " + operacja);
+                    throw new ArgumentOutOfRangeException("Wybrano niedozwoloną figurę");
             }
-            return wynik;
+            //Wynik ma być typu INT dlatego wykonujemy konwersję
+            return Convert.ToInt32(wynik);
+        }
+
+        public void WalidacjaZmiennych(double a, double b)
+        {
+
+            if (!CzyJestDodatnia(a)) throw new ArgumentException("Zmienna A musi być dodatnia");
+            if (this.Parametry.Figura is Figury.Prostokąt || this.Parametry.Figura is Figury.Trójkąt)
+            {
+                if (CzyJestDodatnia(b)) throw new ArgumentException("Zmienna B musi być dodatnia");
+            }
+        }
+
+        public bool CzyJestDodatnia(double zmienna)
+        {
+            return (zmienna >= 0);
         }
     }
 }
