@@ -90,11 +90,11 @@ namespace Rekrutacja.Workers.Template
                         {
                             throw new ArgumentNullException("Parametry nie zostały przekazane");
                         }
-                        int A = ParserStringToInt(this.Parametry.A);
+                        int A = KonwersjaStringDoInt(this.Parametry.A);
                         int B = 0; // Domyślnie 0, gdy figura nie wymaga drugiego wymiaru
                         if (this.Parametry.Figura is Figury.Trójkąt || this.Parametry.Figura is Figury.Prostokąt)
                         {
-                            B = ParserStringToInt(this.Parametry.B);
+                            B = KonwersjaStringDoInt(this.Parametry.B);
                         }
                         var wynik = ObliczPoleFigury(A, B, this.Parametry.Figura);
                         //Features - są to pola rozszerzające obiekty w bazie danych, dzięki czemu nie jestesmy ogarniczeni to kolumn jakie zostały utworzone przez producenta
@@ -135,11 +135,13 @@ namespace Rekrutacja.Workers.Template
             return Convert.ToInt32(wynik);
         }
 
-        public int ParserStringToInt(string zmienna)
+        public int KonwersjaStringDoInt(string zmienna)
         {
             int wynik = 0;
+            bool liczbaDziesietna = false;
+            int licznikSeparatorow = 0;
             //Sprawdzamy czy string nie jest pusty
-            if (String.IsNullOrEmpty(zmienna))
+            if (System.String.IsNullOrEmpty(zmienna))
             {
                 throw new ArgumentException("Zmienna nie może być pusta");
             }
@@ -154,10 +156,32 @@ namespace Rekrutacja.Workers.Template
                 var aktualnyZnak = zmienna[i];
                 if (aktualnyZnak < '0' || aktualnyZnak > '9')
                 {
-                    throw new FormatException($"Nieprawidłowy znak '{aktualnyZnak}' w zmiennej tekstowej");
+                    if (aktualnyZnak == '.' && licznikSeparatorow == 0)
+                    {
+                        licznikSeparatorow++;
+                        liczbaDziesietna = true;
+                    }
+                    else
+                    {
+                        throw new FormatException($"Nieprawidłowy znak '{aktualnyZnak}' w zmiennej tekstowej");
+                    }
                 }
-                int wartośćInt = aktualnyZnak - '0';
-                wynik = wynik * 10 + wartośćInt;
+                else
+                {
+                    int aktualnaLiczba = 0;
+                    if (liczbaDziesietna)
+                    {
+                        aktualnyZnak = ((aktualnyZnak >= '5') ? '1' : '0'); //Zaokrąglenie liczby dziesiętnej w górę lub dół w zależności od liczby po przecinku
+                        aktualnaLiczba = aktualnyZnak - '0';
+                        liczbaDziesietna = false;
+                        wynik = wynik + aktualnaLiczba;
+                    }
+                    else
+                    {
+                        aktualnaLiczba = aktualnyZnak - '0';
+                        wynik = wynik * 10 + aktualnaLiczba;
+                    }
+                }
             }
             return wynik;
         }
