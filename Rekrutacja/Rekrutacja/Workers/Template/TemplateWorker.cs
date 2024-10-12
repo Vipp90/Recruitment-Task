@@ -18,8 +18,18 @@ namespace Rekrutacja.Workers.Template
         //Aby parametry działały prawidłowo dziedziczymy po klasie ContextBase
         public class TemplateWorkerParametry : ContextBase
         {
+            [Caption("A")]
+            public double A { get; set; }
+
+            [Caption("B")]
+            public double B { get; set; }
+
             [Caption("Data obliczeń")]
             public Date DataObliczen { get; set; }
+
+            [Caption("Operacja")]
+            public char Operacja { get; set; }
+
             public TemplateWorkerParametry(Context context) : base(context)
             {
                 this.DataObliczen = Date.Today;
@@ -39,15 +49,21 @@ namespace Rekrutacja.Workers.Template
            Mode = ActionMode.ReadOnlySession,
            Icon = ActionIcon.Accept,
            Target = ActionTarget.ToolbarWithText)]
+
         public void WykonajAkcje()
         {
             //Włączenie Debug, aby działał należy wygenerować DLL w trybie DEBUG
             DebuggerSession.MarkLineAsBreakPoint();
             //Pobieranie danych z Contextu
-            Pracownik pracownik = null;
-            if (this.Cx.Contains(typeof(Pracownik)))
+            Pracownik[] pracownicy = null;
+            if (this.Cx.Contains(typeof(Pracownik[])))
             {
-                pracownik = (Pracownik)this.Cx[typeof(Pracownik)];
+                pracownicy = (Pracownik[])this.Cx[typeof(Pracownik[])];
+            }
+            //Sprawdzenie czy context zawiera element typu Pracownik[]
+            if (pracownicy == null)
+            {
+                throw new ArgumentNullException("Kontekst nie zawiera żadnego pracownika");
             }
 
             //Modyfikacja danych
@@ -57,16 +73,49 @@ namespace Rekrutacja.Workers.Template
                 //Otwieramy Transaction aby można było edytować obiekt z sesji
                 using (ITransaction trans = nowaSesja.Logout(true))
                 {
-                    //Pobieramy obiekt z Nowo utworzonej sesji
-                    var pracownikZSesja = nowaSesja.Get(pracownik);
-                    //Features - są to pola rozszerzające obiekty w bazie danych, dzięki czemu nie jestesmy ogarniczeni to kolumn jakie zostały utworzone przez producenta
-                    pracownikZSesja.Features["DataObliczen"] = this.Parametry.DataObliczen;
+                    foreach (var pracownik in pracownicy)
+                    {
+                        //Pobieramy obiekt z Nowo utworzonej sesji
+                        var pracownikZSesja = nowaSesja.Get(pracownik);
+                        if (Parametry == null)
+                        {
+                            throw new ArgumentNullException("Parametry nie zostały przekazane");
+                        }
+                        var wynik = WykonajObliczenie(this.Parametry.A, this.Parametry.B, this.Parametry.Operacja);
+                        //Features - są to pola rozszerzające obiekty w bazie danych, dzięki czemu nie jestesmy ogarniczeni to kolumn jakie zostały utworzone przez producenta
+                        pracownikZSesja.Features["DataObliczen"] = this.Parametry.DataObliczen;
+                        pracownikZSesja.Features["Wynik"] = wynik;
+                    }
                     //Zatwierdzamy zmiany wykonane w sesji
                     trans.CommitUI();
                 }
                 //Zapisujemy zmiany
                 nowaSesja.Save();
             }
+        }
+
+        public double WykonajObliczenie(double a, double b, char operacja)
+        {
+            double wynik = 0;
+            switch (operacja)
+            {
+                case '+':
+                    wynik = a + b;
+                    break;
+                case '-':
+                    wynik = a - b;
+                    break;
+                case '*':
+                    wynik = a * b;
+                    break;
+                case '/':
+                    if (b == 0) throw new DivideByZeroException("Nie można dzielić przez zero");
+                    wynik = a / b;
+                    break;
+                default:
+                    throw new InvalidOperationException("Nieznana operacja " + operacja);
+            }
+            return wynik;
         }
     }
 }
