@@ -179,7 +179,7 @@ namespace Rekrutacja.Workers.Template
         {
             if (System.String.IsNullOrEmpty(zmienna)) throw new ArgumentException("Zmienna nie może być pusta");
             if (zmienna[0] == '-') throw new FormatException("Zmienna do obliczania pola powierzchni figur nie może być ujemna");
-            string wzorzec = @"^\d+([.,]\d+)?$";
+            string wzorzec = @"^\d+([.,]\d+)?$"; //Dopuszczamy cyfry 0-9 oraz część dziesiętną oddzieloną '.' lub ','
             if (!Regex.IsMatch(zmienna, wzorzec)) throw new FormatException("Nieprawidłowy znak w zmiennej tekstowej");
         }
     }
