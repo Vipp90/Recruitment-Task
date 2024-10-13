@@ -136,13 +136,10 @@ namespace Rekrutacja.Workers.Template
             if (!CzyJestDodatnia(a)) throw new ArgumentException("Zmienna A musi być dodatnia");
             if (this.Parametry.Figura is Figury.Prostokąt || this.Parametry.Figura is Figury.Trójkąt)
             {
-                if (CzyJestDodatnia(b)) throw new ArgumentException("Zmienna B musi być dodatnia");
+                if (!CzyJestDodatnia(b)) throw new ArgumentException("Zmienna B musi być dodatnia");
             }
         }
 
-        public bool CzyJestDodatnia(double zmienna)
-        {
-            return (zmienna >= 0);
-        }
+        Func<double, bool> CzyJestDodatnia = zmienna => zmienna >= 0;
     }
 }
