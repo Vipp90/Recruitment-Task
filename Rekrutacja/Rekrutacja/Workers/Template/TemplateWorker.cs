@@ -8,6 +8,7 @@ using Soneta.Kadry;
 using Soneta.KadryPlace;
 using Soneta.Types;
 using Rekrutacja.Workers.Template;
+using System.Text.RegularExpressions;
 
 //Rejetracja Workera - Pierwszy TypeOf określa jakiego typu ma być wyświetlany Worker, Drugi parametr wskazuje na jakim Typie obiektów będzie wyświetlany Worker
 [assembly: Worker(typeof(TemplateWorker), typeof(Pracownicy))]
@@ -140,50 +141,46 @@ namespace Rekrutacja.Workers.Template
             int wynik = 0;
             bool liczbaDziesietna = false;
             int licznikSeparatorow = 0;
-            //Sprawdzamy czy string nie jest pusty
-            if (System.String.IsNullOrEmpty(zmienna))
-            {
-                throw new ArgumentException("Zmienna nie może być pusta");
-            }
+            int liczbaPoPrzecinku = 0;
 
-            if (zmienna[0] == '-')
-            {
-                throw new FormatException("Zmienna do obliczania pola powierzchni figur nie może być ujemna");
-            }
-
+            WalidacjaString(zmienna);
             for (int i = 0; i < zmienna.Length; i++)
             {
                 var aktualnyZnak = zmienna[i];
-                if (aktualnyZnak < '0' || aktualnyZnak > '9')
+
+                if ((aktualnyZnak == '.' || aktualnyZnak == ',') && licznikSeparatorow == 0)
                 {
-                    if (aktualnyZnak == '.' && licznikSeparatorow == 0)
+                    licznikSeparatorow++;
+                    liczbaDziesietna = true;
+                    continue;
+                }
+
+                int aktualnaLiczba = 0;
+                if (liczbaDziesietna)
+                {
+                    liczbaPoPrzecinku++;
+                    if (liczbaPoPrzecinku == 1) //Zakładamy, że parser zaokrągla do jednej liczby po przecinku
                     {
-                        licznikSeparatorow++;
-                        liczbaDziesietna = true;
-                    }
-                    else
-                    {
-                        throw new FormatException($"Nieprawidłowy znak '{aktualnyZnak}' w zmiennej tekstowej");
+                        aktualnyZnak = ((aktualnyZnak >= '6') ? '1' : '0'); //Zaokrąglenie liczby dziesiętnej w górę lub dół w zależności od liczby po przecinku
+                        aktualnaLiczba = aktualnyZnak - '0';
+                        wynik = wynik + aktualnaLiczba;
+                        break;
                     }
                 }
                 else
                 {
-                    int aktualnaLiczba = 0;
-                    if (liczbaDziesietna)
-                    {
-                        aktualnyZnak = ((aktualnyZnak >= '5') ? '1' : '0'); //Zaokrąglenie liczby dziesiętnej w górę lub dół w zależności od liczby po przecinku
-                        aktualnaLiczba = aktualnyZnak - '0';
-                        liczbaDziesietna = false;
-                        wynik = wynik + aktualnaLiczba;
-                    }
-                    else
-                    {
-                        aktualnaLiczba = aktualnyZnak - '0';
-                        wynik = wynik * 10 + aktualnaLiczba;
-                    }
+                    aktualnaLiczba = aktualnyZnak - '0';
+                    wynik = wynik * 10 + aktualnaLiczba;
                 }
             }
             return wynik;
+        }
+        public void WalidacjaString(string zmienna)
+        {
+            if (System.String.IsNullOrEmpty(zmienna)) throw new ArgumentException("Zmienna nie może być pusta");
+            if (zmienna[0] == '-') throw new FormatException("Zmienna do obliczania pola powierzchni figur nie może być ujemna");
+            string wzorzec = @"^\d+([.,]\d+)?$";
+            if (!Regex.IsMatch(zmienna, wzorzec)) throw new FormatException("Nieprawidłowy znak w zmiennej tekstowej");
         }
     }
 }
